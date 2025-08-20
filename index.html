@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aljabar Outdoor - Toko Outdoor Terlengkap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#15803d", // green-700
+              secondary: "#166534", // green-800
+              accent: "#22c55e", // green-500
+              orange: "#ea580c", // orange-600
+              light: "#f0fdf4", // green-50
+              lighter: "#ffffff",
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <!-- Simple Navbar -->
+    <nav class="bg-white shadow-md border-b">
+      <div class="container mx-auto px-4 py-4">
+        <div class="flex items-center justify-center">
+          <!-- Logo & Brand Name -->
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center"
+            >
+              <span class="text-white text-2xl">🏕️</span>
+            </div>
+            <h1 class="text-3xl font-bold text-primary">Aljabar Outdoor</h1>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+      <!-- Status -->
+      <div
+        id="status"
+        class="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hidden"
+      >
+        <div class="flex items-center space-x-2">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>📡 Memuat data produk...</span>
+        </div>
+      </div>
+
+      <section>
+        <div
+          id="products"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        ></div>
+      </section>
+    </main>
+
+    <script>
+      // Global variables
+      let currentBackendUrl = "";
+      const DEFAULT_ENDPOINTS = [
+        "http://127.0.0.1:5000",
+        "http://52.63.150.97:5000",
+      ];
+
+      // Initialize and auto-load products
+      document.addEventListener("DOMContentLoaded", function () {
+        tryDefaultEndpoints();
+      });
+
+      // Try default endpoints in order
+      async function tryDefaultEndpoints() {
+        for (const endpoint of DEFAULT_ENDPOINTS) {
+          try {
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch(`${endpoint}/produk`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              currentBackendUrl = endpoint;
+              const result = await response.json();
+              if (result.status === "success") {
+                displayProducts(result.data);
+                updateStats(result.total || result.data.length);
+                hideStatus();
+                return;
+              }
+            }
+          } catch (error) {
+            console.log(`Failed to connect to ${endpoint}:`, error.message);
+          }
+        }
+
+       
+      }
+
+      // Utility functions
+      function showStatus(message, type = "loading") {
+        const statusDiv = document.getElementById("status");
+        const iconMap = {
+          loading: "fas fa-spinner fa-spin",
+          error: "fas fa-exclamation-triangle",
+          success: "fas fa-check-circle",
+        };
+
+        statusDiv.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <i class="${iconMap[type]}"></i>
+            <span>${message}</span>
+          </div>
+        `;
+
+        statusDiv.className = "mb-6 p-4 rounded-lg";
+
+        if (type === "loading") {
+          statusDiv.className +=
+            " bg-blue-50 border border-blue-200 text-blue-700";
+        } else if (type === "error") {
+          statusDiv.className +=
+            " bg-red-50 border border-red-200 text-red-700";
+        } else if (type === "success") {
+          statusDiv.className +=
+            " bg-green-50 border border-green-200 text-green-700";
+        }
+
+        statusDiv.classList.remove("hidden");
+      }
+
+      function hideStatus() {
+        document.getElementById("status").classList.add("hidden");
+      }
+
+      function updateStats(total) {
+        const statsDiv = document.getElementById("stats");
+        const totalDiv = document.getElementById("totalProducts");
+        totalDiv.textContent = total;
+        statsDiv.classList.remove("hidden");
+      }
+
+      function hideStats() {
+        document.getElementById("stats").classList.add("hidden");
+      }
+
+      function formatPrice(price) {
+        return new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+        }).format(price);
+      }
+
+      // Display products in grid
+      function displayProducts(products) {
+        const productsDiv = document.getElementById("products");
+
+        if (!products || products.length === 0) {
+          productsDiv.innerHTML = `
+            <div class="col-span-full text-center py-16">
+              <div class="text-6xl mb-4">🏕️</div>
+              <h3 class="text-2xl font-bold mb-4 text-gray-800">Tidak ada produk tersedia</h3>
+              <p class="text-gray-600">Belum ada produk outdoor yang ditambahkan ke katalog kami.</p>
+            </div>
+          `;
+          return;
+        }
+
+        productsDiv.innerHTML = "";
+
+        products.forEach((product, index) => {
+          const productCard = document.createElement("div");
+          productCard.className =
+            "bg-white rounded-lg shadow-sm border hover:shadow-lg transition-shadow duration-300 overflow-hidden";
+
+          if (product.foto) {
+            console.log(`${product.foto}`);
+          }
+
+          productCard.innerHTML = `
+            <div class="bg-white rounded-3xl shadow-lg overflow-hidden border border-slate-200/60 h-full">
+              <div class="relative h-64 bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+                ${
+                  product.foto
+                    ? `<img src="${product.foto}" alt="${product.nama_produk}" 
+                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'flex flex-col items-center justify-center h-full text-slate-400\\'>�<div class=\\'text-sm mt-2\\'>Gambar tidak tersedia</div></div>';"
+                         onload="console.log('✅ Image loaded:', this.src)">`
+                    : '<div class="flex flex-col items-center justify-center h-full text-slate-400"><span class="text-5xl mb-2">🏕️</span><div class="text-sm">Tidak ada gambar</div></div>'
+                }
+                <div class="absolute top-4 right-4">
+                  <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-lg"></div>
+                </div>
+              </div>
+              
+              <div class="p-6">
+                <div class="mb-4">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-3">
+                    ${product.kategori || "Kategori"}
+                  </span>
+                  <h3 class="text-xl font-bold text-slate-800 mb-2 line-clamp-2 leading-tight">${
+                    product.nama_produk || "Nama tidak tersedia"
+                  }</h3>
+                </div>
+                
+                <div class="mb-4">
+                  <div class="text-3xl font-bold gradient-text">${formatPrice(
+                    product.harga || 0
+                  )}</div>
+                </div>
+                
+                <p class="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-6">${
+                  product.deskripsi ||
+                  "Produk outdoor berkualitas tinggi untuk petualangan Anda."
+                }</p>
+                
+                <button class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-3 px-6 rounded-2xl font-semibold transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl flex items-center justify-center space-x-2">
+                  <span>🛒</span>
+                  <span>Lihat Detail</span>
+                </button>
+              </div>
+            </div>
+          `;
+
+          productsDiv.appendChild(productCard);
+        });
+      }
+    </script>
+  </body>
+</html>
